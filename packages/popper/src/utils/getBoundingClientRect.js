@@ -33,12 +33,14 @@ export default function getBoundingClientRect(element) {
     }
   }
   catch(e){}
-
-  const result = {
-    left: rect.left,
-    top: rect.top,
-    width: rect.right - rect.left,
-    height: rect.bottom - rect.top,
+  
+  // account for transform: scale(x) https://github.com/FezVrasta/popper.js/issues/376#issuecomment-493609289
+  var scale = rect.width / element.offsetWidth;
+  var result = {
+    left: Math.round(rect.left / scale),
+    top: Math.round(rect.top / scale),
+    width: Math.round((rect.right - rect.left) / scale),
+    height: Math.round((rect.bottom - rect.top) / scale)
   };
 
   // subtract scrollbar size from sizes
