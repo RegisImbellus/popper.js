@@ -5,6 +5,15 @@ import getScroll from './getScroll';
 import getClientRect from './getClientRect';
 import isIE from './isIE';
 
+function scaleInAxis(renderedSize, originalSize) {
+  // handle cases where sizes are close and offsetWidth can have rounding mismatches
+  if ( Math.abs(originalSize - renderedSize) <= 0.5 ) { return 1; }
+  // use comparitive sizes to derive a scale value
+  const scale = Math.round(renderedSize) / originalSize;
+  if (isNaN(scale)) { return 1; } // no scale for 0/0 sizes
+  return scale;
+}
+
 /**
  * Get bounding client rect of given element
  * @method
@@ -34,13 +43,26 @@ export default function getBoundingClientRect(element) {
   }
   catch(e){}
   
-  // account for transform: scale(x) https://github.com/FezVrasta/popper.js/issues/376#issuecomment-493609289
-  const scale = rect.width / element.offsetWidth;
+  // WIP: account for transform: scale(x) https://github.com/FezVrasta/popper.js/issues/376#issuecomment-493609289
+  // BUG: rotation will invalidate this, (because it changes getBoundingClientRect size)
+  // TODO: add test for non-axis aligned rotation, e.g. 45 deg
+  const scaleX = scaleInAxis(rect.width, element.offsetWidth);
+  const scaleY = scaleInAxis(rect.height, element.offsetHeight);
+  
+  // TODO: add test for scaled up position
+  // TODO: add test for scaled down position
+  const scaledRect = {
+    left: rect.left / scaleX,
+    top: rect.top / scaleY,
+    right: rect.right / scaleX,
+    bottom: rect.bottom / scaleY,
+  }
+
   const result = {
-    left: Math.round(rect.left / scale),
-    top: Math.round(rect.top / scale),
-    width: Math.round((rect.right - rect.left) / scale),
-    height: Math.round((rect.bottom - rect.top) / scale),
+    left: scaledRect.left,
+    top: scaledRect.top,
+    width: scaledRect.right - scaledRect.left,
+    height: scaledRect.bottom - scaledRect.top,
   };
 
   // subtract scrollbar size from sizes
