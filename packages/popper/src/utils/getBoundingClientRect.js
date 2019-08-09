@@ -14,6 +14,25 @@ function scaleInAxis(renderedSize, originalSize) {
   return scale;
 }
 
+// roughly: https://css-tricks.com/get-value-of-css-rotation-through-javascript/
+function rotationFromMatrix(element) {
+  if(element instanceof Element) {
+    const style = (typeof window !== 'undefined' ? window : global).getComputedStyle(element, null);
+    const transform = style.getPropertyValue('transform') ||
+      style.getPropertyValue('-webkit-transform') ||
+      style.getPropertyValue('-moz-transform') ||
+      style.getPropertyValue('-ms-transform') ||
+      style.getPropertyValue('-o-transform') ||
+      null;
+    if (transform !== undefined && transform !== null && transform !== 'none') {
+      let values = transform.match(/(matrix\()(.*)\)/)[2]
+      values = values.split(',')
+      return Math.round(Math.atan2(Number(values[1]), Number(values[0])) * (180/Math.PI));
+    }
+  }
+  return 0;
+}
+
 /**
  * Get bounding client rect of given element
  * @method
@@ -43,21 +62,20 @@ export default function getBoundingClientRect(element) {
   }
   catch(e){}
   
-  // WIP: account for transform: scale(x) https://github.com/FezVrasta/popper.js/issues/376#issuecomment-493609289
-  // BUG: rotation will invalidate this, (because it changes getBoundingClientRect size)
-  // TODO: add test for non-axis aligned rotation, e.g. 45 deg
-  const scaleX = scaleInAxis(rect.width, element.offsetWidth);
-  const scaleY = scaleInAxis(rect.height, element.offsetHeight);
+  // account for parent container  with `transform: scale(x)` #376 https://github.com/FezVrasta/popper.js/issues/376
+  // TODO: does not position popper relative to a transform scaled sibling/
+  const rotation = rotationFromMatrix(element);
+  const axisInverted = rotation === 90 || rotation === 270;
+  const scaleX = !axisInverted ? scaleInAxis(rect.width, element.offsetWidth) : scaleInAxis(rect.width, element.offsetHeight);
+  const scaleY = !axisInverted ? scaleInAxis(rect.height, element.offsetHeight) : scaleInAxis(rect.height, element.offsetWidth);
   
-  // TODO: add test for scaled up position
-  // TODO: add test for scaled down position
   const scaledRect = {
     left: rect.left / scaleX,
     top: rect.top / scaleY,
     right: rect.right / scaleX,
     bottom: rect.bottom / scaleY,
   }
-
+  
   const result = {
     left: scaledRect.left,
     top: scaledRect.top,

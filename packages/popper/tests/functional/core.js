@@ -1551,7 +1551,7 @@ const arrowSize = 5;
       });
     });
 
-    it('init a popper with position fixed with a transformd parent', done => {
+    it('init a popper with position fixed with a transform translated parent', done => {
       const container = document.createElement('div');
       container.style.width = '800px';
       container.style.height = '600px';
@@ -1585,6 +1585,55 @@ const arrowSize = 5;
           );
           expect(getRect(popper).top).toBeApprox(
             getRect(ref).top
+          );
+
+          data.instance.destroy();
+          done();
+        },
+      });
+    });
+
+    // test for #376
+    it('init a popper positioned relative to a ref inside a scaled parent', done => {
+      const scaleFactor = 1.5;
+      const container = document.createElement('div');
+      container.style.width = '800px';
+      container.style.height = '600px';
+      container.style.marginLeft = '200px';
+      container.style.marginTop = '200px';
+      container.style.background = 'grey';
+      container.style.position = 'relative';
+      container.style.transform = `scale(${scaleFactor})`;
+
+      const popper = document.createElement('div');
+      popper.style.width = '100px';
+      popper.style.height = '100px';
+      
+      popper.style.background = 'yellow';
+      popper.innerHTML = 'popper 376';
+
+      const ref = document.createElement('div');
+      ref.style.width = '100px';
+      ref.style.height = '100px';
+      ref.style.position = 'absolute';
+      ref.style.top = '100px';
+      ref.style.left = '100px';
+      ref.style.background = 'green';
+      ref.innerHTML = 'ref 376';
+
+      container.appendChild(popper);
+      container.appendChild(ref);
+      jasmineWrapper.appendChild(container);
+
+      new Popper(ref, popper, {
+        placement: 'right',
+        onCreate: data => {
+          // popper is outside the scaling context... so check the popper position against the item removing the scale factor
+          expect(getRect(popper).left).toBeApprox(
+            (getRect(ref).right) //  / scaleFactor
+          );
+          expect(getRect(popper).top).toBeApprox(
+            (getRect(ref).top) //  / scaleFactor
           );
 
           data.instance.destroy();
